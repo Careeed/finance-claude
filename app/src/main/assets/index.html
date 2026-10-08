@@ -38,6 +38,9 @@ input,select,textarea{width:100%;padding:12px;border-radius:12px;border:1.5px so
 input:focus,select:focus{outline:none;border-color:var(--pr2)}
 label{display:block;font-size:12.5px;font-weight:600;color:var(--mu);margin:12px 0 5px}
 .seg{display:flex;background:var(--chip);border-radius:12px;padding:3px}
+.hwseg{display:flex;background:rgba(255,255,255,.18);border-radius:10px;padding:2px;margin-top:10px}
+.hwseg button{flex:1;border:0;background:none;padding:6px 4px;border-radius:8px;color:#fff;font-size:12.5px;opacity:.85}
+.hwseg button.on{background:rgba(255,255,255,.95);color:#0b4f4a;font-weight:650;opacity:1}
 .seg button{flex:1;border:0;background:none;padding:9px 4px;border-radius:10px;color:var(--tx);font-size:14px}
 .seg button.on{background:var(--card);box-shadow:var(--sh);font-weight:650}
 .btn{border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:650;background:var(--pr);color:#fff;width:100%;margin-top:16px}
@@ -92,11 +95,11 @@ const hashPw=(id,p)=>sha256('ee2026|'+id+'|'+p);
 let DB=null;const ANDROID=window.Android||null;
 function fresh(){const s=JSON.parse(JSON.stringify(window.SEED));
   return {v:1,users:s.users,accounts:s.accounts.map(a=>({...a,bu:0})),movs:s.movs,hist:s.hist,tomb:{},pw:{},theme:'auto',
-   cats:{o:[],i:[]},lastMonth:s.lastMonth,seq:1000,sync:{url:'',token:'',pers:false,last:0,err:''}}}
+   cats:{o:[],i:[]},lastMonth:s.lastMonth,seq:1000,sync:{url:'',token:'',pers:false,last:0,err:''},homeView:'all',quota:{S:700,P:700}}}
 function load(){let raw=null;try{raw=ANDROID?ANDROID.load():localStorage.getItem('ees')}catch(e){}
   if(raw){try{DB=JSON.parse(raw)}catch(e){DB=null}}
   if(!DB||!DB.movs)DB=fresh();
-  DB.extraCats=DB.extraCats||{o:[],i:[]};DB.sync=DB.sync||{url:'',token:'',pers:false,last:0,err:''};
+  DB.extraCats=DB.extraCats||{o:[],i:[]};DB.sync=DB.sync||{url:'',token:'',pers:false,last:0,err:''};DB.homeView=DB.homeView||'all';DB.quota=DB.quota||{S:700,P:700};
 }
 let autoT=null;function save(){saveNow();clearTimeout(autoT);autoT=setTimeout(()=>syncNow(true),4000)}
 function saveNow(){const s=JSON.stringify(DB);try{if(ANDROID)ANDROID.save(s);else localStorage.setItem('ees',s)}catch(e){toast('Errore di salvataggio')}}
@@ -117,6 +120,8 @@ function monthMovs(ym){return DB.movs.filter(m=>m.m===ym)}
 function liveDelta(accId){let d=0;for(const m of DB.movs){if(!m.L||m.k!==accId)continue;d+=m.t==='i'?m.a:-m.a}return d}
 function balance(a){return (a.base||0)+liveDelta(a.id)}
 function totalWorth(){return DB.accounts.reduce((s,a)=>s+balance(a),0)}
+function commonBalance(){return DB.accounts.filter(a=>a.owner==='C').reduce((s,a)=>s+balance(a),0)}
+function anticipated(person,ym){return sumBy(DB.movs.filter(m=>m.t==='o'&&m.s==='c'&&m.w===person&&m.m===ym&&(!m.k||(acc(m.k)&&acc(m.k).owner!=='C'))),m=>m.a)}
 function cats(t){const c={};for(const m of DB.movs)if(m.t===t&&!(m.s==='p'))c[m.c]=(c[m.c]||0)+1;for(const x of DB.extraCats[t]||[])if(!(x in c))c[x]=0;return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(x=>x[0])}
 function monthList(){const set=new Set(DB.movs.map(m=>m.m));set.add(nowM());return [...set].sort()}
 
@@ -149,13 +154,21 @@ function vHome(){
      <div class="sm mu" style="margin-top:8px">Entrate</div><div class="mid in">${eur(e)}</div>
      <div class="sm mu" style="margin-top:6px">Pagato per la casa</div><div class="mid">${eur(c)}</div>
      <div class="sm mu" style="margin-top:6px">Spese personali</div><div class="mid ${open?'':'lock'}">${open?eur(p):'000,00 €'}</div></div>`};
+  const wv=DB.homeView==='shared'?commonBalance():totalWorth();
+  const avail=commonBalance()-S;
   return monBar()+`
-  <div class="card" style="background:linear-gradient(135deg,var(--pr),#0b4f4a);color:#fff"><div class="sm" style="opacity:.85">💰 Patrimonio complessivo</div>
-    <div class="big">${eur(totalWorth())}</div><div class="sm" style="opacity:.8">somma dei saldi di tutti i conti · <a style="color:#fff" onclick="go('acc')">vedi conti</a></div></div>
+  <div class="card" style="background:linear-gradient(135deg,var(--pr),#0b4f4a);color:#fff"><div class="sm" style="opacity:.85">💰 ${DB.homeView==='shared'?'Fondo comune':'Patrimonio complessivo'}</div>
+    <div class="big">${eur(wv)}</div><div class="sm" style="opacity:.8">${DB.homeView==='shared'?'somma dei conti condivisi':'somma dei saldi di tutti i conti'} · <a style="color:#fff" onclick="go('acc')">vedi conti</a></div>
+    <div class="hwseg"><button class="${DB.homeView!=='shared'?'on':''}" onclick="DB.homeView='all';save();rr()">Tutti i conti</button><button class="${DB.homeView==='shared'?'on':''}" onclick="DB.homeView='shared';save();rr()">Fondo comune</button></div></div>
   <div class="g2"><div class="card"><h3>📈 Entrate</h3><div class="mid in">${eur(E)}</div></div>
     <div class="card"><h3>📉 Spese casa</h3><div class="mid out">${eur(S)}</div></div></div>
-  <div class="card"><h3>💶 Disponibilità del mese</h3><div class="big ${E-S<0?'neg':''}">${eur(E-S,true)}</div><div class="sm mu">entrate − spese della casa</div>
+  <div class="card"><h3>💶 Fondo comune disponibile</h3><div class="big ${avail<0?'neg':''}">${eur(avail,true)}</div><div class="sm mu">${VM===nowM()?'saldo dei conti condivisi':'saldo odierno dei conti condivisi'} − spese casa di ${ymLabel(VM)}</div>
     <div class="sm" style="margin-top:10px">Spese casa pagate da: Simo <b>${eur(paid.S)}</b> · Paola <b>${eur(paid.P)}</b> · Conto comune <b>${eur(paid.C)}</b></div></div>
+  <div class="card"><h3>🔁 Versamenti al fondo comune · ${ymLabel(VM)}</h3>
+    ${['S','P'].map(id=>{const qt=DB.quota[id]||0,an=anticipated(id,VM),diff=Math.round((qt-an)*100)/100;return `<div class="row sp" style="padding:9px 0;border-bottom:1px solid var(--ln)">
+      <div><b>${esc(userName(id))}</b><div class="sm mu">quota <a onclick="quotaForm('${id}')" style="color:var(--pr)">${eur0(qt)}</a> · anticipato ${eur(an)}</div></div>
+      <div style="text-align:right">${diff>0.009?`<div class="mid out">${eur(diff)}</div><div class="sm mu">da versare</div>`:`<div class="mid in">${eur(-diff)}</div><div class="sm mu">${diff<0?'credito':'quota coperta'}</div>`}</div></div>`}).join('')}
+    <div class="sm mu" style="padding-top:8px">Anticipato = spese di casa pagate con conto o contanti personali invece che dal fondo comune. Si azzera a ogni nuovo mese. Tocca la quota per modificarla.</div></div>
   <div class="g2" style="margin-bottom:12px">${pers('S')}${pers('P')}</div>
   <div class="card"><h3>Ultimi movimenti</h3>${lastList()}</div>`}
 function lastList(){const l=DB.movs.filter(visible).filter(m=>m.m===VM).sort(cmpMov).slice(0,6);
@@ -293,6 +306,11 @@ function vAcc(){const groups=[['S','👤 Conti di '+userName('S')],['P','👤 Co
   const ct=cash.filter(a=>isUnlocked(a.owner));
   if(cash.length)h+=`<div class="card" style="padding:6px 14px 4px"><div class="grp" style="padding-top:8px"><span>💵 Contanti</span><span>${eur(sumBy(ct,balance))}</span></div>${cash.map(a=>line(a)+'').join('')}</div>`;
   return h+`<div class="sm mu" style="padding:4px 8px">Tocca un conto per correggerne il saldo. I saldi si aggiornano automaticamente con le spese e le entrate registrate da ora in poi.</div>`}
+function quotaForm(id){$('modal').innerHTML=`<div class="bd" onclick="if(event.target===this)closeM()"><div class="sheet"><h2>Quota mensile di ${esc(userName(id))}</h2>
+  <div class="sm mu">Quanto dovrebbe versare ogni mese nel fondo comune.</div>
+  <label>Importo (€)</label><input id="qv" inputmode="decimal" value="${String(DB.quota[id]||0).replace('.',',')}">
+  <button class="btn" onclick="quotaSave('${id}')">Salva</button></div></div>`;setTimeout(()=>{const e=$('qv');e&&e.focus()},60)}
+function quotaSave(id){const v=parseFloat($('qv').value.replace(',','.'));if(isNaN(v)||v<0)return toast('Importo non valido');DB.quota[id]=Math.round(v*100)/100;save();closeM();rr()}
 function editAcc(id){const a=acc(id);$('modal').innerHTML=`<div class="bd" onclick="if(event.target===this)closeM()"><div class="sheet"><h2>${esc(a.name)}</h2><div class="sm mu">Saldo attuale: ${eur(balance(a))}</div>
   <label>Imposta il saldo reale (€)</label><input id="nb" inputmode="decimal" value="${String(Math.round(balance(a)*100)/100).replace('.',',')}"><button class="btn" onclick="setBal('${id}')">Aggiorna saldo</button></div></div>`}
 function setBal(id){const v=parseFloat($('nb').value.replace(',','.'));if(isNaN(v))return toast('Importo non valido');const a=acc(id);
