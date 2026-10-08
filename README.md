@@ -20,6 +20,12 @@ GitHub → **Actions → Build APK → Run workflow**, poi scarica l'artifact `E
 L'APK è firmato con `app/debug.keystore` (incluso nel repo): gli aggiornamenti successivi
 si installano sopra la versione precedente senza perdere i dati.
 
+## Il tuo script già distribuito
+
+https://script.google.com/macros/s/AKfycbzo96GzaqHOuHBfqqXbpi8cvTQ-DTNmbuSRDsJWlKPstmJ20NQeLQb-w1SPb1eqIZkf/exec
+
+Usalo com'è (Impostazioni → Collega Fogli Google) sui due telefoni, con la parola segreta che hai impostato tu nel codice. Se in futuro modifichi `Code.gs`, ricordati di fare "Nuova versione" nella distribuzione, altrimenti l'app continua a usare questa.
+
 ## Attivare la sincronizzazione tra i due telefoni (facoltativa)
 1. Crea un nuovo Foglio Google vuoto (sheets.new).
 2. Menu **Estensioni → Apps Script**. Cancella il contenuto e incolla tutto `tools/apps-script/Code.gs`.

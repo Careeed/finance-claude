@@ -122,16 +122,17 @@ function monthList(){const set=new Set(DB.movs.map(m=>m.m));set.add(nowM());retu
 
 /* ============ router ============ */
 let TAB='home',VM=nowM();
-const TABS=[['home','🏠','Home'],['mov','📋','Movimenti'],['acc','🏦','Conti'],['stat','📊','Statistiche']];
+const TABS=[['home','🏠','Home'],['pers','👤','Personale'],['mov','📋','Movimenti'],['acc','🏦','Conti'],['stat','📊','Statistiche']];
 const TITLES={home:'Home',mov:'Movimenti',acc:'Conti',stat:'Statistiche',set:'Impostazioni'};
+let PP='S';
 function go(t){TAB=t;render()}
 function render(){let night=false;try{night=ANDROID?ANDROID.isNight():matchMedia('(prefers-color-scheme:dark)').matches}catch(e){}
   const th=DB.theme==='auto'?(night?'dark':'light'):DB.theme;
   document.documentElement.dataset.t=th;try{ANDROID&&ANDROID.setBars(th==='dark'?'#134e4a':'#0f766e',th==='dark'?'#17202a':'#ffffff',th!=='dark')}catch(e){}
-  $('ttl').textContent=TITLES[TAB];
+  $('ttl').textContent=TAB==='pers'?('Spese personali di '+userName(PP)):TITLES[TAB];
   $('nav').innerHTML=TABS.map(t=>`<button class="${TAB===t[0]?'on':''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
   $('fab').style.display=(TAB==='set')?'none':'block';
-  const v={home:vHome,mov:vMov,acc:vAcc,stat:vStat,set:vSet}[TAB]();
+  const v={home:vHome,pers:vPers,mov:vMov,acc:vAcc,stat:vStat,set:vSet}[TAB]();
   const sc=$('main').scrollTop;$('main').innerHTML=v;if(RESTORE){$('main').scrollTop=sc;RESTORE=false}else $('main').scrollTop=0}
 let RESTORE=false;function rr(){RESTORE=true;render()}
 window.onBack=function(){if($('modal2').innerHTML){$('modal2').innerHTML='';ASK=ASKT=null;return true}if($('modal').innerHTML){closeM();return true}if(TAB!=='home'){go('home');return true}return false};
@@ -160,6 +161,32 @@ function vHome(){
 function lastList(){const l=DB.movs.filter(visible).filter(m=>m.m===VM).sort(cmpMov).slice(0,6);
   return l.length?l.map(rowMov).join(''):'<div class="empty">Nessun movimento in questo mese</div>'}
 
+/* ============ PERSONALE ============ */
+function vPers(){
+  if(!isUnlocked(PP)){
+    const other=PP==='S'?'P':'S';
+    return `<div class="card" style="text-align:center;padding:30px 16px">
+     <div style="font-size:40px">🔒</div><h3 style="text-transform:none;font-size:16px;margin-top:4px">Spese personali di ${esc(userName(PP))}</h3>
+     <div class="sm mu" style="margin:8px 0 18px">Protette da password. Sblocca per vedere l'elenco e i totali.</div>
+     <button class="btn" onclick="unlock('${PP}')">🔒 Sblocca ${esc(userName(PP))}</button>
+     <button class="btn sec" onclick="PP='${other}';rr()">Vedi invece ${esc(userName(other))}</button></div>`;
+  }
+  const list=DB.movs.filter(m=>m.t==='o'&&m.s==='p'&&m.w===PP&&m.m===VM).sort(cmpMov);
+  const tot=sumBy(list,m=>m.a);
+  const months=[];for(let i=11;i>=0;i--)months.push(addM(VM,-i));
+  const trend=months.map(m=>sumBy(DB.movs.filter(x=>x.t==='o'&&x.s==='p'&&x.w===PP&&x.m===m),x=>x.a));
+  const avg6=trend.slice(-6).reduce((a,b)=>a+b,0)/6;
+  const by={};list.forEach(m=>by[m.c]=(by[m.c]||0)+m.a);
+  const cat=Object.entries(by).sort((a,b)=>b[1]-a[1]),mx=cat.length?cat[0][1]:1;
+  return `<div class="seg" style="margin-bottom:10px">${['S','P'].map(id=>`<button class="${PP===id?'on':''}" onclick="PP='${id}';rr()">${esc(userName(id))}</button>`).join('')}</div>`
+  +monBar()
+  +`<div class="card" style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff"><div class="sm" style="opacity:.85">Totale spese personali · ${ymLabel(VM)}</div><div class="big">${eur(tot)}</div>
+     <div class="sm" style="opacity:.8">${list.length} movimenti · media ultimi 6 mesi ${eur0(avg6)}</div></div>`
+  +`<div class="card"><h3>Andamento (12 mesi fino a ${ymLabel(VM)})</h3>${barChart(months,[{n:'Personali '+userName(PP),c:'#8b5cf6',v:trend}])}</div>`
+  +(cat.length?`<div class="card"><h3>Per categoria · ${ymLabel(VM)}</h3>${cat.map(([c,v])=>`<div style="margin:9px 0"><div class="row sp sm"><span>${esc(c)}</span><b>${eur(v)} <span class="mu">${Math.round(v/tot*100)}%</span></b></div><div class="bt"><div class="bar" style="width:${v/mx*100}%;background:#8b5cf6"></div></div></div>`).join('')}</div>`:'')
+  +`<div class="card"><h3>Movimenti · ${ymLabel(VM)}</h3>${list.length?list.map(rowMov).join(''):'<div class="empty">Nessuna spesa personale in questo mese</div>'}</div>`;
+}
+
 /* ============ MOVIMENTI ============ */
 let F={p:'',c:'',k:'',t:'',q:'',m:'',lim:120};
 const cmpMov=(a,b)=>a.m<b.m?1:a.m>b.m?-1:(b.d-a.d)||(a.L&&!b.L?-1:(!a.L&&b.L?1:0))||(b.id>a.id?1:-1);
@@ -185,6 +212,7 @@ function vMov(){const l=filtered();const tin=sumBy(l.filter(m=>m.t==='i'),m=>m.a
 let FM=null;
 function openForm(id){const m=id?DB.movs.find(x=>x.id===id):null;
   FM=m?{...m,edit:true}:{t:'o',w:'C',s:'c',c:'',a:'',k:null,n:'',ds:today(),edit:false};
+  if(!m&&TAB==='pers'){FM.w=PP;FM.s='p'}
   if(m)FM.ds=m.d?(m.m+'-'+String(m.d).padStart(2,'0')):m.m+'-01';
   if(!m)FM.k=defAcc(FM.w);
   formRender()}
