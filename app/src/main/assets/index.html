@@ -155,20 +155,18 @@ function vHome(){
      <div class="sm mu" style="margin-top:6px">Pagato per la casa</div><div class="mid">${eur(c)}</div>
      <div class="sm mu" style="margin-top:6px">Spese personali</div><div class="mid ${open?'':'lock'}">${open?eur(p):'000,00 €'}</div></div>`};
   const wv=DB.homeView==='shared'?commonBalance():totalWorth();
-  const avail=commonBalance()-S;
   return monBar()+`
   <div class="card" style="background:linear-gradient(135deg,var(--pr),#0b4f4a);color:#fff"><div class="sm" style="opacity:.85">💰 ${DB.homeView==='shared'?'Fondo comune':'Patrimonio complessivo'}</div>
     <div class="big">${eur(wv)}</div><div class="sm" style="opacity:.8">${DB.homeView==='shared'?'somma dei conti condivisi':'somma dei saldi di tutti i conti'} · <a style="color:#fff" onclick="go('acc')">vedi conti</a></div>
     <div class="hwseg"><button class="${DB.homeView!=='shared'?'on':''}" onclick="DB.homeView='all';save();rr()">Tutti i conti</button><button class="${DB.homeView==='shared'?'on':''}" onclick="DB.homeView='shared';save();rr()">Fondo comune</button></div></div>
   <div class="g2"><div class="card"><h3>📈 Entrate</h3><div class="mid in">${eur(E)}</div></div>
     <div class="card"><h3>📉 Spese casa</h3><div class="mid out">${eur(S)}</div></div></div>
-  <div class="card"><h3>💶 Fondo comune disponibile</h3><div class="big ${avail<0?'neg':''}">${eur(avail,true)}</div><div class="sm mu">${VM===nowM()?'saldo dei conti condivisi':'saldo odierno dei conti condivisi'} − spese casa di ${ymLabel(VM)}</div>
-    <div class="sm" style="margin-top:10px">Spese casa pagate da: Simo <b>${eur(paid.S)}</b> · Paola <b>${eur(paid.P)}</b> · Conto comune <b>${eur(paid.C)}</b></div></div>
   <div class="card"><h3>🔁 Versamenti al fondo comune · ${ymLabel(VM)}</h3>
     ${['S','P'].map(id=>{const qt=DB.quota[id]||0,an=anticipated(id,VM),diff=Math.round((qt-an)*100)/100;return `<div class="row sp" style="padding:9px 0;border-bottom:1px solid var(--ln)">
       <div><b>${esc(userName(id))}</b><div class="sm mu">quota <a onclick="quotaForm('${id}')" style="color:var(--pr)">${eur0(qt)}</a> · anticipato ${eur(an)}</div></div>
       <div style="text-align:right">${diff>0.009?`<div class="mid out">${eur(diff)}</div><div class="sm mu">da versare</div>`:`<div class="mid in">${eur(-diff)}</div><div class="sm mu">${diff<0?'credito':'quota coperta'}</div>`}</div></div>`}).join('')}
-    <div class="sm mu" style="padding-top:8px">Anticipato = spese di casa pagate con conto o contanti personali invece che dal fondo comune. Si azzera a ogni nuovo mese. Tocca la quota per modificarla.</div></div>
+    <div class="sm mu" style="padding-top:8px">Anticipato = spese di casa pagate con conto o contanti personali invece che dal fondo comune. Si azzera a ogni nuovo mese. Tocca la quota per modificarla.</div>
+    <div class="sm" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--ln)">Spese casa pagate da: Simo <b>${eur(paid.S)}</b> · Paola <b>${eur(paid.P)}</b> · Conto comune <b>${eur(paid.C)}</b></div></div>
   <div class="g2" style="margin-bottom:12px">${pers('S')}${pers('P')}</div>
   <div class="card"><h3>Ultimi movimenti</h3>${lastList()}</div>`}
 function lastList(){const l=DB.movs.filter(visible).filter(m=>m.m===VM).sort(cmpMov).slice(0,6);
