@@ -43,6 +43,9 @@ Da notare:
   su ogni telefono (per sicurezza, restano solo sul dispositivo).
 - Se scegli di sincronizzare anche le spese personali, finiscono nel Foglio Google in chiaro,
   leggibili da chi ha accesso al foglio.
+- **I saldi dei conti si sincronizzano sempre**, anche quelli personali e anche con "Spese personali"
+  disattivato: serve a far coincidere il patrimonio complessivo sui due telefoni. Solo il dettaglio
+  dei singoli movimenti personali resta facoltativo.
 - Nel foglio compare anche una scheda leggibile **"Movimenti app"**, in sola lettura,
   utile per dare un'occhiata ai movimenti registrati dall'app.
 - Se modifichi di nuovo `Code.gs` in futuro, dopo aver incollato le modifiche vai su
